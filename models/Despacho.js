@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const despachoSchema = new mongoose.Schema({
     // Identificación del dispositivo (es la clave principal)
@@ -50,9 +51,10 @@ const despachoSchema = new mongoose.Schema({
     },
     
     // Lugar de depósito/ubicación
-    deposito: { // DEPOSITO
-        type: String, 
-        trim: true
+    deposito: {
+        type: Schema.Types.ObjectId,
+        ref: 'Deposito', // Asegúrate que 'Deposito' coincida con tu modelo
+        required: true 
     }
 }, {
     timestamps: true // Esto añade 'createdAt' y 'updatedAt' automáticamente

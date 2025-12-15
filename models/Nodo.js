@@ -1,16 +1,18 @@
-// models/Nodo.js
+// models/Nodo.js (AJUSTADO PARA REFERENCIA)
 const mongoose = require('mongoose');
+const { Schema } = mongoose; // Importamos Schema para las referencias
 
-const nodoSchema = new mongoose.Schema({
+const nodoSchema = new Schema({
     idNodo: {
         type: String,
         required: true,
-        unique: true // Asegura que no haya dos nodos con el mismo ID
+        unique: true 
     },
     deposito: {
-        type: String,
-        required: true,
-        // Aquí podríamos agregar una lista de depósitos válidos si fuera necesario
+        // 🌟 CRÍTICO: Referencia al Depósito por su ID 🌟
+        type: Schema.Types.ObjectId, 
+        ref: 'Deposito', // Nombre del modelo al que hace referencia
+        required: true
     },
     createdAt: {
         type: Date,

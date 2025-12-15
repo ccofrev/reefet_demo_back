@@ -1,34 +1,36 @@
-// backend/middleware/authMiddleware.js
+// backend/middleware/authMiddleware.js (FINAL Y FUNCIONAL)
 const jwt = require('jsonwebtoken');
+
+// IMPORTANTE: Asegúrate de que process.env.JWT_SECRET esté cargado correctamente
+// (Revisa el archivo .env)
 
 const protect = (req, res, next) => {
     let token;
 
-    // 1. Verificar si el token existe en el encabezado
-    // El token se envía típicamente como: Authorization: Bearer <TOKEN_REAL>
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         try {
-            // Extraer el token (eliminar 'Bearer ')
             token = req.headers.authorization.split(' ')[1];
 
-            // 2. Verificar/Decodificar el token usando la clave secreta
+            // 2. Verificar/Decodificar el token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-            // 3. Si es válido, podemos pasar el ID del usuario al objeto de la solicitud (opcional)
-            // req.user = await User.findById(decoded.id).select('-password');
             
-            // Si todo está bien, pasamos al siguiente middleware/función (el controlador de la ruta)
-            next();
+            // 🌟🌟🌟 AJUSTE CRÍTICO 🌟🌟🌟
+            // 3. Adjuntar el payload del token (incluyendo IDs de permisos) a la solicitud
+            // Esto permite que el controlador de la ruta (e.g., /api/despachos) acceda a: 
+            // req.user.depositosIds y req.user.empresaId
+            req.user = decoded;
+            
+            // 🌟🌟🌟 FIN AJUSTE CRÍTICO 🌟🌟🌟
+
+            next(); // Continuar
         } catch (error) {
             console.error('Error en verificación de token:', error);
             // Si falla la verificación (token expirado o inválido)
-            res.status(401).json({ message: 'Token no autorizado o expirado.' });
+            return res.status(401).json({ message: 'Token no autorizado o expirado.' });
         }
-    }
-
-    if (!token) {
+    } else {
         // Si no se encuentra el token en la petición
-        res.status(401).json({ message: 'No se encontró el token. Acceso denegado.' });
+        return res.status(401).json({ message: 'No se encontró el token. Acceso denegado.' });
     }
 };
 
