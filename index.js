@@ -35,7 +35,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions)); // 👈 Solo una vez, con la configuración de seguridad
 // -------------------------------------------------------------
-
+app.set('trust proxy', 1);
 
 // 2. Conectar a Mongo
 connectDB();
