@@ -76,7 +76,17 @@ router.post('/', async (req, res) => {
     try {
         const { identificadorNodo, idNodo, idReefer, tServ, ...otrosDatos } = req.body;
 
-        const depositoEncontrado = await Deposito.findOne({ identificadorNodo });
+        // const depositoEncontrado = await Deposito.findOne({ identificadorNodo });
+        // 🌟 PASO CLAVE 1: Buscar el NODO usando el identificadorNodo 🌟
+        const nodoEncontrado = await Nodo.findOne({ idNodo: identificadorNodo }); 
+        // Nota: Asumo que el campo en tu modelo Nodo se llama 'idNodo'
+
+        if (!nodoEncontrado) {
+            return res.status(404).json({ message: `No se encontró un nodo asociado al identificador: ${identificadorNodo}` });
+        }
+        
+        // 🌟 PASO CLAVE 2: Extraer el ID del Depósito desde el Nodo 🌟
+        const depositoId = nodoEncontrado.deposito; // El campo 'deposito' en el modelo Nodo debe ser la referencia ObjectId
 
         if (!depositoEncontrado) {
             return res.status(404).json({ message: `No se encontró un depósito asociado al nodo: ${identificadorNodo}` });
