@@ -3,6 +3,7 @@ const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const Despacho = require('../models/Despacho'); 
 const Deposito = require('../models/Deposito'); 
+const Nodo = require('../models/Nodo'); 
 const mongoose = require('mongoose'); 
 
 const router = express.Router();
@@ -77,9 +78,10 @@ router.post('/', async (req, res) => {
         const { identificadorNodo, idNodo, idReefer, tServ, ...otrosDatos } = req.body;
 
         // const depositoEncontrado = await Deposito.findOne({ identificadorNodo });
+
+
         // 🌟 PASO CLAVE 1: Buscar el NODO usando el identificadorNodo 🌟
         const nodoEncontrado = await Nodo.findOne({ idNodo: identificadorNodo }); 
-        // Nota: Asumo que el campo en tu modelo Nodo se llama 'idNodo'
 
         if (!nodoEncontrado) {
             return res.status(404).json({ message: `No se encontró un nodo asociado al identificador: ${identificadorNodo}` });
