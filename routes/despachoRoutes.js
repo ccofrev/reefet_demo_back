@@ -2,7 +2,6 @@
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const Despacho = require('../models/Despacho'); 
-const Deposito = require('../models/Deposito'); 
 const Nodo = require('../models/Nodo'); 
 const mongoose = require('mongoose'); 
 
@@ -72,34 +71,31 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// 2. POST / (Recibir nuevo registro de despacho) - Mantenemos la lógica de IOT
+// 2. POST / (Recibir nuevo registro de despacho - RUTA DE IOT)
 router.post('/', async (req, res) => {
     try {
-        const { identificadorNodo, idNodo, idReefer, tServ, ...otrosDatos } = req.body;
-
-        // const depositoEncontrado = await Deposito.findOne({ identificadorNodo });
-
-
-        // 🌟 PASO CLAVE 1: Buscar el NODO usando el identificadorNodo 🌟
-        const nodoEncontrado = await Nodo.findOne({ idNodo: identificadorNodo }); 
+        // El payload MQTT trae el identificador del sensor como idNodo
+        const { idNodo, idReefer, tServ, ...otrosDatos } = req.body; 
+        
+        // 1. Buscar el NODO usando el idNodo recibido del sensor
+        const nodoEncontrado = await Nodo.findOne({ idNodo }); 
 
         if (!nodoEncontrado) {
-            return res.status(404).json({ message: `No se encontró un nodo asociado al identificador: ${identificadorNodo}` });
+            return res.status(404).json({ message: `No se encontró un nodo asociado al identificador: ${idNodo}` });
         }
         
-        // 🌟 PASO CLAVE 2: Extraer el ID del Depósito desde el Nodo 🌟
-        const depositoId = nodoEncontrado.deposito; // El campo 'deposito' en el modelo Nodo debe ser la referencia ObjectId
+        // 2. Extraer los IDs
+        const nodoId = nodoEncontrado._id; // ID del documento Nodo
+        const depositoId = nodoEncontrado.deposito; // ID de depósito referenciado en el Nodo
 
-        if (!depositoEncontrado) {
-            return res.status(404).json({ message: `No se encontró un depósito asociado al nodo: ${identificadorNodo}` });
-        }
-
+        // 3. Crear el nuevo registro de Despacho con AMBAS referencias
         const nuevoDespacho = await Despacho.create({
-            idNodo,
+            idNodo, 
             idReefer,
             tServ,
             ...otrosDatos,
-            deposito: depositoEncontrado._id 
+            nodo: nodoId,      // 🌟 Referencia al documento Nodo (ObjectId)
+            deposito: depositoId // Referencia al documento Depósito (ObjectId)
         });
 
         res.status(201).json({ 
@@ -108,8 +104,8 @@ router.post('/', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error al registrar despacho:', error);
-        res.status(500).json({ message: 'Error interno del servidor al registrar el despacho.' });
+        console.error('Error al registrar despacho desde MQTT:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
     }
 });
 

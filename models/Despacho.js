@@ -1,3 +1,4 @@
+// backend/models/Despacho.js
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
@@ -7,10 +8,6 @@ const despachoSchema = new mongoose.Schema({
         type: String, 
         required: true,
         trim: true,
-        // Puedes ponerlo 'unique' si cada documento es un nodo único, 
-        // o si cada registro es un "despacho" con el mismo nodo repetido.
-        // Si se repite (lo más común en series de datos), quita 'unique'.
-        // Lo dejaré sin 'unique' ya que es un registro de despacho.
     },
     
     // Identificación del contenedor refrigerado (Reefer)
@@ -48,6 +45,13 @@ const despachoSchema = new mongoose.Schema({
         type: String, 
         required: true, 
         trim: true
+    },
+    
+    // 🌟🌟🌟 NUEVO CAMPO DE REFERENCIA AL NODO 🌟🌟🌟
+    nodo: {
+        type: Schema.Types.ObjectId,
+        ref: 'Nodo', // Asegúrate que 'Nodo' coincida con tu modelo de Nodo
+        required: true 
     },
     
     // Lugar de depósito/ubicación
