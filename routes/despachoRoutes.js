@@ -10,24 +10,33 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
     try {
         const { search } = req.query;
+        // La información del token (req.user) viene del middleware 'protect'
         const usuarioDepositosIds = req.user.depositosIds; 
         
+        // Si el usuario no tiene depósitos asignados, devolvemos una lista vacía
+        if (!usuarioDepositosIds || usuarioDepositosIds.length === 0) {
+            return res.json([]);
+        }
+
         let query = {};
         
         // 1. APLICAR FILTRO DE SEGURIDAD (POR DEPÓSITO ID)
+        // Solo busca despachos cuyos IDs de depósito estén en la lista permitida del usuario
         query.deposito = { $in: usuarioDepositosIds };
 
         // 2. APLICAR FILTRO DE BÚSQUEDA (si existe)
         if (search) {
             const searchRegex = new RegExp(search, 'i');
             query.$or = [
+                // Busca en campos directos del Despacho
                 { idNodo: searchRegex },
                 { idReefer: searchRegex }
             ];
         }
 
+        // 3. Ejecutar la consulta con población
         const despachos = await Despacho.find(query)
-            .populate('deposito', 'nombre identificadorNodo') 
+            .populate('deposito', 'nombre identificadorNodo') // Traemos el nombre del depósito asociado
             .sort({ tServ: -1 })
             .limit(100);
             
@@ -35,11 +44,12 @@ router.get('/', protect, async (req, res) => {
 
     } catch (error) {
         console.error('Error al obtener despachos:', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+        // Devuelve un error 500 para indicar al frontend que algo falló en el backend
+        res.status(500).json({ message: 'Error interno del servidor al obtener despachos.' });
     }
 });
 
-// 2. POST / (Recibir nuevo registro de despacho)
+// 2. POST / (Recibir nuevo registro de despacho - RUTA DE IOT, NO PROTEGIDA)
 router.post('/', async (req, res) => {
     try {
         const { identificadorNodo, idNodo, idReefer, tServ, ...otrosDatos } = req.body;
@@ -57,7 +67,7 @@ router.post('/', async (req, res) => {
             idReefer,
             tServ,
             ...otrosDatos,
-            deposito: depositoEncontrado._id // 👈 Guardamos la referencia ID
+            deposito: depositoEncontrado._id // Guardamos la referencia ID
         });
 
         res.status(201).json({ 
@@ -67,7 +77,7 @@ router.post('/', async (req, res) => {
 
     } catch (error) {
         console.error('Error al registrar despacho:', error);
-        res.status(500).json({ message: 'Error interno del servidor.' });
+        res.status(500).json({ message: 'Error interno del servidor al registrar el despacho.' });
     }
 });
 
