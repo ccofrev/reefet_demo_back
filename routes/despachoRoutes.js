@@ -1,9 +1,9 @@
-// backend/routes/despachoRoutes.js
+// backend/routes/despachoRoutes.js (VERSIÓN FINAL CON LÓGICA DE ADMIN)
 const express = require('express');
 const { protect } = require('../middleware/authMiddleware');
 const Despacho = require('../models/Despacho'); 
 const Deposito = require('../models/Deposito'); 
-const mongoose = require('mongoose'); // 🌟 IMPORTACIÓN CLAVE 🌟
+const mongoose = require('mongoose'); 
 
 const router = express.Router();
 
@@ -11,31 +11,49 @@ const router = express.Router();
 router.get('/', protect, async (req, res) => {
     try {
         const { search } = req.query;
-        const usuarioDepositosIds = req.user.depositosIds; 
+        let query = {}; // Se inicializa vacía. Si es Admin, se mantendrá vacía.
         
-        // Manejar el caso de que el usuario no tenga depósitos (devolver lista vacía)
-        if (!usuarioDepositosIds || usuarioDepositosIds.length === 0) {
-            return res.json([]);
+        // 🌟🌟🌟 LÓGICA CLAVE: FILTRADO POR ROL 🌟🌟🌟
+        if (!req.user.isAdmin) {
+            // Lógica solo para USUARIOS NORMALES
+            const usuarioDepositosIds = req.user.depositosIds; 
+            
+            if (!usuarioDepositosIds || usuarioDepositosIds.length === 0) {
+                return res.json([]); // Si no es Admin y no tiene depósitos, no ve nada.
+            }
+            
+            // 1. CONVERSIÓN EXPLÍCITA DE IDs
+            const objectIdDepositos = usuarioDepositosIds.map(id => new mongoose.Types.ObjectId(id));
+            
+            // 2. APLICAR FILTRO DE SEGURIDAD
+            query.deposito = { $in: objectIdDepositos };
         }
+        // Si es Admin, 'query' sigue siendo {} (consulta todos los documentos)
+        // 🌟🌟🌟 FIN LÓGICA CLAVE 🌟🌟🌟
 
-        // 🌟🌟🌟 CONVERSIÓN EXPLÍCITA DE IDs (Solución al fallo) 🌟🌟🌟
-        const objectIdDepositos = usuarioDepositosIds.map(id => new mongoose.Types.ObjectId(id));
 
-        let query = {};
-        
-        // 1. APLICAR FILTRO DE SEGURIDAD (POR DEPÓSITO ID)
-        // Usamos los IDs convertidos
-        query.deposito = { $in: objectIdDepositos };
-
-        // 2. APLICAR FILTRO DE BÚSQUEDA (si existe)
+        // 2. APLICAR FILTRO DE BÚSQUEDA (se aplica a la query existente o vacía)
         if (search) {
             const searchRegex = new RegExp(search, 'i');
-            query.$or = [
+            const searchConditions = [
                 { idNodo: searchRegex },
                 { idReefer: searchRegex }
             ];
-        }
 
+            if (Object.keys(query).length > 0) {
+                // Si ya hay un filtro (deposito para usuarios normales), combina con $and
+                query = {
+                    $and: [
+                        query, // El filtro: {deposito: {$in: [...]}}
+                        { $or: searchConditions }
+                    ]
+                };
+            } else {
+                // Si la query está vacía (Admin), aplica solo el $or de la búsqueda
+                query = { $or: searchConditions };
+            }
+        }
+        
         // 3. Ejecutar la consulta
         const despachos = await Despacho.find(query)
             .populate('deposito', 'nombre identificadorNodo') 
@@ -45,8 +63,7 @@ router.get('/', protect, async (req, res) => {
         res.json(despachos);
 
     } catch (error) {
-        console.error('Error al obtener despachos:', error);
-        // Devolvemos el mensaje de error en el cuerpo para una mejor depuración en el navegador
+        console.error('ERROR AL CARGAR DESPACHOS:', error.message, error.stack); 
         res.status(500).json({ 
             message: 'Error interno del servidor al obtener despachos.',
             details: error.message 
@@ -54,7 +71,7 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// 2. POST / (Recibir nuevo registro de despacho) - Mantengo la lógica original
+// 2. POST / (Recibir nuevo registro de despacho) - Mantenemos la lógica de IOT
 router.post('/', async (req, res) => {
     try {
         const { identificadorNodo, idNodo, idReefer, tServ, ...otrosDatos } = req.body;
